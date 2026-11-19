@@ -1,0 +1,21 @@
+/* Mengatur Tailwind CSS serta font lokal Manrope untuk seluruh antarmuka LaundryCalc. */
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--color-neutral-50);
+    color: var(--color-neutral-900);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-neutral-50);
+    color: var(--color-neutral-900);
+  }
+}
