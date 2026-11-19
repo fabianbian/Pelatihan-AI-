@@ -1,20 +1,32 @@
-// Komponen utama LaundryCalc yang menyatukan fitur FT-01 sampai FT-06 beserta state dan validasi pesanan.
+// Komponen utama LaundryCalc yang menyatukan FT-01 s.d. FT-06 dan FT-08 dengan tata letak tegas beraksen biru.
 
 import { useMemo, useRef, useState } from 'react';
 import { AddOnSelector } from './components/AddOnSelector';
 import { CustomerForm } from './components/CustomerForm';
+import { MemberCreditSection } from './components/MemberCreditSection';
 import { PriceSummary } from './components/PriceSummary';
 import { ServiceCatalog } from './components/ServiceCatalog';
 import { WeightInput } from './components/WeightInput';
 import {
   APP_INFO,
   DEFAULT_SERVICE_CODE,
+  DISTANCE_RULES,
+  MEMBER_CREDIT_RULES,
   WEIGHT_RULES,
   type AddOnCode,
   type ServiceCode,
 } from './config';
-import { adjustWeight, calculateOrderEstimate } from './lib/calculator';
-import { formatWeight, parseWeightInput } from './lib/format';
+import {
+  adjustDecimalValue,
+  adjustWeight,
+  calculateOrderEstimate,
+  isEligibleForMemberCredit,
+} from './lib/calculator';
+import {
+  formatDistance,
+  formatWeight,
+  parseDecimalInput,
+} from './lib/format';
 import {
   buildWhatsAppMessage,
   buildWhatsAppUrl,
@@ -42,21 +54,51 @@ export default function App() {
     formatWeight(WEIGHT_RULES.defaultKg),
   );
   const [useDelivery, setUseDelivery] = useState<boolean>(false);
+  const [distanceInput, setDistanceInput] = useState<string>(
+    formatDistance(DISTANCE_RULES.defaultKm),
+  );
   const [useFragrance, setUseFragrance] = useState<boolean>(false);
   const [customerName, setCustomerName] = useState<string>('');
   const [pickupAddress, setPickupAddress] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+  const [isMember, setIsMember] = useState<boolean>(false);
+  const [memberYearsInput, setMemberYearsInput] = useState<string>('');
+  const [requestPayLater, setRequestPayLater] = useState<boolean>(false);
   const [errors, setErrors] = useState<Partial<Record<OrderErrorField, string>>>({});
   const [lastWhatsAppUrl, setLastWhatsAppUrl] = useState<string | null>(null);
 
   const weightInputRef = useRef<HTMLInputElement>(null);
+  const distanceInputRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   const addressInputRef = useRef<HTMLTextAreaElement>(null);
+  const memberYearsInputRef = useRef<HTMLInputElement>(null);
 
   const parsedWeight = useMemo(
-    () => parseWeightInput(weightInput, WEIGHT_RULES.minKg, WEIGHT_RULES.maxKg),
+    () => parseDecimalInput(weightInput, WEIGHT_RULES.minKg, WEIGHT_RULES.maxKg),
     [weightInput],
   );
+
+  const parsedDistance = useMemo(
+    () => parseDecimalInput(distanceInput, DISTANCE_RULES.minKm, DISTANCE_RULES.maxKm),
+    [distanceInput],
+  );
+
+  const parsedMemberYears = useMemo(
+    () =>
+      parseDecimalInput(
+        memberYearsInput,
+        MEMBER_CREDIT_RULES.minInputYears,
+        MEMBER_CREDIT_RULES.maxInputYears,
+      ),
+    [memberYearsInput],
+  );
+
+  const isEligibleForPayLater = isEligibleForMemberCredit(
+    isMember,
+    parsedMemberYears.value,
+  );
+
+  const isPayLaterActive = isEligibleForPayLater && requestPayLater;
 
   const estimate = useMemo(
     () =>
@@ -64,9 +106,16 @@ export default function App() {
         serviceCode: selectedServiceCode,
         actualWeightKg: parsedWeight.value,
         useDelivery,
+        distanceKm: parsedDistance.value,
         useFragrance,
       }),
-    [selectedServiceCode, parsedWeight.value, useDelivery, useFragrance],
+    [
+      selectedServiceCode,
+      parsedWeight.value,
+      useDelivery,
+      parsedDistance.value,
+      useFragrance,
+    ],
   );
 
   function clearFieldError(field: OrderErrorField) {
@@ -91,11 +140,30 @@ export default function App() {
     setLastWhatsAppUrl(null);
   }
 
+  function handleDistanceInputChange(value: string) {
+    setDistanceInput(value);
+    clearFieldError('distance');
+    setLastWhatsAppUrl(null);
+  }
+
+  function handleAdjustDistance(deltaKm: number) {
+    const nextKm = adjustDecimalValue(
+      parsedDistance.value,
+      deltaKm,
+      DISTANCE_RULES.minKm,
+      DISTANCE_RULES.maxKm,
+    );
+    setDistanceInput(formatDistance(nextKm));
+    clearFieldError('distance');
+    setLastWhatsAppUrl(null);
+  }
+
   function handleToggleAddOn(code: AddOnCode) {
     if (code === 'T01') {
       setUseDelivery((prev) => {
         const next = !prev;
         if (!next) {
+          clearFieldError('distance');
           clearFieldError('pickupAddress');
         }
         return next;
@@ -128,13 +196,52 @@ export default function App() {
     setLastWhatsAppUrl(null);
   }
 
+  function handleToggleMember() {
+    setIsMember((prev) => {
+      const next = !prev;
+      if (!next) {
+        setRequestPayLater(false);
+        clearFieldError('memberYears');
+      }
+      return next;
+    });
+    setLastWhatsAppUrl(null);
+  }
+
+  function handleMemberYearsChange(value: string) {
+    setMemberYearsInput(value);
+    clearFieldError('memberYears');
+    const parsed = parseDecimalInput(
+      value,
+      MEMBER_CREDIT_RULES.minInputYears,
+      MEMBER_CREDIT_RULES.maxInputYears,
+    );
+    if (!isEligibleForMemberCredit(true, parsed.value)) {
+      setRequestPayLater(false);
+    }
+    setLastWhatsAppUrl(null);
+  }
+
+  function handleTogglePayLater() {
+    if (!isEligibleForPayLater) {
+      setRequestPayLater(false);
+      return;
+    }
+    setRequestPayLater((prev) => !prev);
+    setLastWhatsAppUrl(null);
+  }
+
   function focusErrorField(field: OrderErrorField) {
     const target =
       field === 'weight'
         ? weightInputRef.current
-        : field === 'customerName'
-          ? nameInputRef.current
-          : addressInputRef.current;
+        : field === 'distance'
+          ? distanceInputRef.current
+          : field === 'customerName'
+            ? nameInputRef.current
+            : field === 'pickupAddress'
+              ? addressInputRef.current
+              : memberYearsInputRef.current;
 
     if (target) {
       target.focus();
@@ -145,11 +252,15 @@ export default function App() {
   function handleSubmitOrder() {
     const validation = validateOrderForm({
       weightInput,
+      distanceInput,
       customerName,
       pickupAddress,
       notes,
       useDelivery,
       useFragrance,
+      isMember,
+      memberYearsInput,
+      requestPayLater: isPayLaterActive,
     });
 
     if (!validation.isValid) {
@@ -166,6 +277,7 @@ export default function App() {
       serviceCode: selectedServiceCode,
       actualWeightKg: validation.parsedWeightKg,
       useDelivery,
+      distanceKm: validation.parsedDistanceKm,
       useFragrance,
     });
 
@@ -175,6 +287,9 @@ export default function App() {
       notes,
       useDelivery,
       useFragrance,
+      isMember,
+      memberYears: validation.parsedMemberYears,
+      requestPayLater: isPayLaterActive,
       estimate: confirmedEstimate,
     });
 
@@ -185,68 +300,93 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900">
-      <div className="mx-auto max-w-5xl px-4 pt-6 pb-28 sm:px-6 lg:px-8 lg:py-10">
-        <header className="mb-8 space-y-1">
+      <header className="border-b border-neutral-200 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
             {APP_INFO.name}
           </h1>
-          <p className="text-base text-neutral-600">{APP_INFO.subtitle}</p>
-        </header>
+          <p className="mt-1 text-base text-neutral-600">{APP_INFO.subtitle}</p>
+        </div>
+      </header>
 
+      <div className="mx-auto max-w-6xl px-4 pt-6 pb-28 sm:px-6 lg:px-8 lg:py-8">
         <form
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
             handleSubmitOrder();
           }}
-          className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start"
+          className="space-y-8"
         >
-          <main className="space-y-8 lg:col-span-7">
-            <ServiceCatalog
-              selectedServiceCode={selectedServiceCode}
-              onSelectService={handleSelectService}
-            />
+          <ServiceCatalog
+            selectedServiceCode={selectedServiceCode}
+            onSelectService={handleSelectService}
+          />
 
-            <WeightInput
-              weightInput={weightInput}
-              onWeightInputChange={handleWeightInputChange}
-              onAdjustWeight={handleAdjustWeight}
-              isMinimumChargeApplied={estimate.isMinimumChargeApplied}
-              billedWeightKg={estimate.billedWeightKg}
-              error={errors.weight}
-              inputRef={weightInputRef}
-            />
+          <div className="grid grid-cols-1 gap-8 border-t border-neutral-200 pt-8 lg:grid-cols-12 lg:items-start">
+            <main className="space-y-8 lg:col-span-7">
+              <WeightInput
+                weightInput={weightInput}
+                onWeightInputChange={handleWeightInputChange}
+                onAdjustWeight={handleAdjustWeight}
+                error={errors.weight}
+                inputRef={weightInputRef}
+              />
 
-            <AddOnSelector
-              useDelivery={useDelivery}
-              useFragrance={useFragrance}
-              onToggleAddOn={handleToggleAddOn}
-              fragranceCost={estimate.fragranceCost}
-              isValidWeight={estimate.isValidWeight}
-            />
+              <AddOnSelector
+                useDelivery={useDelivery}
+                useFragrance={useFragrance}
+                distanceInput={distanceInput}
+                distanceKm={estimate.distanceKm}
+                deliveryCost={estimate.deliveryCost}
+                fragranceCost={estimate.fragranceCost}
+                isValidWeight={estimate.isValidWeight}
+                isValidDistance={estimate.isValidDistance}
+                distanceError={errors.distance}
+                onToggleAddOn={handleToggleAddOn}
+                onDistanceInputChange={handleDistanceInputChange}
+                onAdjustDistance={handleAdjustDistance}
+                distanceInputRef={distanceInputRef}
+              />
 
-            <CustomerForm
-              customerName={customerName}
-              pickupAddress={pickupAddress}
-              notes={notes}
-              useDelivery={useDelivery}
-              errors={errors}
-              onCustomerNameChange={handleCustomerNameChange}
-              onPickupAddressChange={handlePickupAddressChange}
-              onNotesChange={handleNotesChange}
-              nameInputRef={nameInputRef}
-              addressInputRef={addressInputRef}
-            />
-          </main>
+              <CustomerForm
+                customerName={customerName}
+                pickupAddress={pickupAddress}
+                notes={notes}
+                useDelivery={useDelivery}
+                errors={errors}
+                onCustomerNameChange={handleCustomerNameChange}
+                onPickupAddressChange={handlePickupAddressChange}
+                onNotesChange={handleNotesChange}
+                nameInputRef={nameInputRef}
+                addressInputRef={addressInputRef}
+              />
 
-          <div className="lg:col-span-5">
-            <PriceSummary
-              estimate={estimate}
-              useDelivery={useDelivery}
-              useFragrance={useFragrance}
-              onSubmitOrder={handleSubmitOrder}
-              lastWhatsAppUrl={lastWhatsAppUrl}
-            />
+              <MemberCreditSection
+                isMember={isMember}
+                memberYearsInput={memberYearsInput}
+                parsedMemberYears={parsedMemberYears.value}
+                isEligibleForPayLater={isEligibleForPayLater}
+                requestPayLater={isPayLaterActive}
+                memberYearsError={errors.memberYears}
+                onToggleMember={handleToggleMember}
+                onMemberYearsChange={handleMemberYearsChange}
+                onTogglePayLater={handleTogglePayLater}
+                memberYearsInputRef={memberYearsInputRef}
+              />
+            </main>
+
+            <div className="lg:col-span-5">
+              <PriceSummary
+                estimate={estimate}
+                useDelivery={useDelivery}
+                useFragrance={useFragrance}
+                isPayLaterActive={isPayLaterActive}
+                memberYears={parsedMemberYears.value}
+                onSubmitOrder={handleSubmitOrder}
+                lastWhatsAppUrl={lastWhatsAppUrl}
+              />
+            </div>
           </div>
         </form>
       </div>

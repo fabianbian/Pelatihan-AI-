@@ -1,8 +1,8 @@
-// Menyimpan seluruh data bisnis resmi dari PRD dan aturan konfigurasi aplikasi LaundryCalc.
+// Menyimpan seluruh data bisnis resmi dari PRD, aturan iterasi desimal & ongkir per km, serta syarat Bayar Nanti member.
 
 export type ServiceCode = 'L01' | 'L02' | 'L03';
 export type AddOnCode = 'T01' | 'T02';
-export type AddOnCalculationType = 'flat' | 'per_billed_kg';
+export type AddOnCalculationType = 'per_km' | 'per_billed_kg';
 
 export interface MainService {
   code: ServiceCode;
@@ -21,8 +21,8 @@ export interface AddOnService {
 }
 
 export const APP_INFO = {
-  name: 'LaundryCalc',
-  subtitle: 'Hitung estimasi biaya cucian dan pesan lewat WhatsApp.',
+  name: 'Mantap Laundry',
+  subtitle: 'Hitung estimasi biaya cucian presisi dan pesan lewat WhatsApp.',
 } as const;
 
 export const STORE_INFO = {
@@ -31,15 +31,27 @@ export const STORE_INFO = {
   openingHours: '08.00–20.00 WIB',
   pickupHours: '09.00–17.00 WIB',
   pickupRadiusMaxKm: 5,
-  minimumChargeKg: 3.0,
+  minimumChargeKg: 3,
 } as const;
 
 export const WEIGHT_RULES = {
-  defaultKg: 3,
+  defaultKg: 1,
   minKg: 0.1,
   maxKg: 100,
-  stepKg: 0.1,
   quickStepKg: 0.5,
+} as const;
+
+export const DISTANCE_RULES = {
+  defaultKm: 1,
+  minKm: 0.1,
+  maxKm: STORE_INFO.pickupRadiusMaxKm,
+  quickStepKm: 0.5,
+} as const;
+
+export const MEMBER_CREDIT_RULES = {
+  minTenureYearsExclusive: 1,
+  minInputYears: 0.1,
+  maxInputYears: 50,
 } as const;
 
 export const DEFAULT_SERVICE_CODE: ServiceCode = 'L01';
@@ -50,21 +62,21 @@ export const MAIN_SERVICES: readonly MainService[] = [
     name: 'Cuci Lipat',
     pricePerKg: 6000,
     durationDays: 3,
-    description: 'Dicuci, dikeringkan, dilipat tanpa setrika (Min. charge 3 kg)',
+    description: 'Dicuci, dikeringkan, dilipat tanpa setrika',
   },
   {
     code: 'L02',
     name: 'Cuci Setrika',
     pricePerKg: 8000,
-    durationDays: 3,
-    description: 'Dicuci, disetrika, dilipat rapi (Min. charge 3 kg)',
+    durationDays: 2,
+    description: 'Dicuci, disetrika, dilipat rapi',
   },
   {
     code: 'L03',
     name: 'Cuci Setrika Ekspres',
     pricePerKg: 15000,
     durationDays: 1,
-    description: 'Sama dengan Cuci Setrika, selesai besok (Min. charge 3 kg)',
+    description: 'Sama dengan Cuci Setrika, selesai besok',
   },
 ] as const;
 
@@ -72,9 +84,9 @@ export const ADD_ONS: readonly AddOnService[] = [
   {
     code: 'T01',
     name: 'Antar-Jemput',
-    price: 10000,
-    calculationType: 'flat',
-    notes: 'Area penjemputan radius max 5 km',
+    price: 2000,
+    calculationType: 'per_km',
+    notes: 'Tarif per km, area penjemputan maks 5 km',
   },
   {
     code: 'T02',

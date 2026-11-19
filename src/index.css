@@ -3,6 +3,18 @@
 
 @theme {
   --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --animate-price-update: price-update-fade 200ms ease-out;
+}
+
+@keyframes price-update-fade {
+  from {
+    opacity: 0.3;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @layer base {

@@ -1,4 +1,4 @@
-// Menyediakan fungsi tunggal untuk memformat Rupiah, angka desimal berat, dan mengurai input berat.
+// Menyediakan fungsi tunggal untuk memformat Rupiah, angka desimal tanpa pembulatan, dan mengurai input desimal.
 
 /**
  * Memformat bilangan bulat menjadi format Rupiah Indonesia sesuai PRD (contoh: Rp 18.000).
@@ -13,29 +13,43 @@ export function formatRupiah(amount: number): string {
 }
 
 /**
- * Memformat berat kilogram memakai koma tanpa nol di belakang (contoh: 4,5 atau 3).
+ * Memformat angka desimal Indonesia memakai koma tanpa membulatkan angka bermakna (contoh: 2,35 atau 3).
  */
-export function formatWeight(kg: number): string {
-  const normalized = Math.round(kg * 10) / 10;
-  if (Number.isInteger(normalized)) {
-    return String(normalized);
+export function formatDecimal(value: number): string {
+  const clean = Number(value.toPrecision(12));
+  if (Number.isInteger(clean)) {
+    return String(clean);
   }
-  return normalized.toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  return String(clean).replace('.', ',');
 }
 
-export interface ParsedWeightResult {
+/**
+ * Memformat berat kilogram memakai aturan desimal tanpa pembulatan.
+ */
+export function formatWeight(kg: number): string {
+  return formatDecimal(kg);
+}
+
+/**
+ * Memformat jarak pengiriman kilometer memakai aturan desimal tanpa pembulatan.
+ */
+export function formatDistance(km: number): string {
+  return formatDecimal(km);
+}
+
+export interface ParsedDecimalResult {
   value: number | null;
   reason: 'empty' | 'invalid_number' | 'too_small' | 'too_large' | null;
 }
 
 /**
- * Mengurai teks input berat yang boleh memakai koma atau titik serta memeriksa rentang valid.
+ * Mengurai teks input desimal yang boleh memakai koma atau titik tanpa membulatkan nilainya.
  */
-export function parseWeightInput(
+export function parseDecimalInput(
   rawInput: string,
-  minKg: number,
-  maxKg: number,
-): ParsedWeightResult {
+  minValue: number,
+  maxValue: number,
+): ParsedDecimalResult {
   const trimmed = rawInput.trim();
   if (trimmed === '') {
     return { value: null, reason: 'empty' };
@@ -51,13 +65,24 @@ export function parseWeightInput(
     return { value: null, reason: 'invalid_number' };
   }
 
-  if (parsed < minKg) {
+  if (parsed < minValue) {
     return { value: null, reason: 'too_small' };
   }
 
-  if (parsed > maxKg) {
+  if (parsed > maxValue) {
     return { value: null, reason: 'too_large' };
   }
 
   return { value: parsed, reason: null };
+}
+
+/**
+ * Alias pengurai khusus input berat cucian.
+ */
+export function parseWeightInput(
+  rawInput: string,
+  minKg: number,
+  maxKg: number,
+): ParsedDecimalResult {
+  return parseDecimalInput(rawInput, minKg, maxKg);
 }

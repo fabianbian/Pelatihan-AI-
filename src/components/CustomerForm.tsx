@@ -32,15 +32,18 @@ export function CustomerForm({
 }: CustomerFormProps) {
   return (
     <section aria-labelledby="heading-pemesan" className="space-y-4">
-      <h2 id="heading-pemesan" className="text-lg font-semibold text-neutral-900">
+      <h2
+        id="heading-pemesan"
+        className="text-lg font-semibold tracking-tight text-neutral-900"
+      >
         Data pemesan
       </h2>
 
-      <div className="rounded-2xl bg-white p-4 sm:p-6 space-y-6">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-4 sm:p-6 space-y-6">
         <div className="space-y-2">
           <label
             htmlFor="customer-name"
-            className="block text-sm font-medium text-neutral-900"
+            className="block text-sm font-semibold text-neutral-900"
           >
             Nama
           </label>
@@ -56,7 +59,7 @@ export function CustomerForm({
             aria-describedby={errors.customerName ? 'name-error' : undefined}
             placeholder="Contoh: Budi Santoso"
             className={`min-h-[44px] w-full rounded-xl border bg-white px-4 py-2.5 text-base text-neutral-900 placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
-              errors.customerName ? 'border-red-600' : 'border-neutral-200'
+              errors.customerName ? 'border-red-600' : 'border-neutral-300'
             }`}
           />
           {errors.customerName && (
@@ -78,7 +81,7 @@ export function CustomerForm({
           <div className="space-y-2">
             <label
               htmlFor="pickup-address"
-              className="block text-sm font-medium text-neutral-900"
+              className="block text-sm font-semibold text-neutral-900"
             >
               Alamat penjemputan
             </label>
@@ -94,7 +97,7 @@ export function CustomerForm({
               aria-describedby={errors.pickupAddress ? 'address-error' : 'address-helper'}
               placeholder="Contoh: Jl. Melati No. 12, Kost Putri"
               className={`w-full rounded-xl border bg-white px-4 py-2.5 text-base text-neutral-900 placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 ${
-                errors.pickupAddress ? 'border-red-600' : 'border-neutral-200'
+                errors.pickupAddress ? 'border-red-600' : 'border-neutral-300'
               }`}
             />
             {errors.pickupAddress ? (
@@ -124,7 +127,7 @@ export function CustomerForm({
         <div className="space-y-2">
           <label
             htmlFor="order-notes"
-            className="block text-sm font-medium text-neutral-900"
+            className="block text-sm font-semibold text-neutral-900"
           >
             Catatan khusus (opsional)
           </label>
@@ -135,7 +138,7 @@ export function CustomerForm({
             value={notes}
             onChange={(event) => onNotesChange(event.target.value)}
             placeholder="Contoh: Pisahkan baju putih dan berwarna"
-            className="w-full rounded-xl border border-neutral-200 bg-white px-4 py-2.5 text-base text-neutral-900 placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+            className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-base text-neutral-900 placeholder:text-neutral-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
           />
         </div>
       </div>
